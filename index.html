@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Chat App (UI Update)</title>
+    <title>Secure Chat App (@Username Version)</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -23,7 +23,7 @@
         .container { width: 100%; max-width: 400px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
         .active-screen { display: block; }
         
-        /* Chat Layout (Full Screen) */
+        /* Chat Layout */
         #chatScreen { max-width: 900px; width: 90%; height: 90vh; display: none; grid-template-columns: 300px 1fr; overflow: hidden; padding: 0; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: white; }
         .sidebar { background: #f7f7f7; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         .chat-area { display: flex; flex-direction: column; background: var(--chat-bg); position: relative; }
@@ -37,17 +37,19 @@
         button { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         .secondary-btn { background: #ccc; color: #333; }
-        .icon-btn { width: 35px; height: 35px; border-radius: 50%; padding: 0; display: flex; justify-content: center; align-items: center; font-size: 16px; margin: 0 0 0 5px; background: rgba(255,255,255,0.2); }
-        .icon-btn:hover { background: rgba(255,255,255,0.4); }
-
+        
+        /* Buttons */
+        .icon-btn { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; justify-content: center; align-items: center; font-size: 18px; margin: 0 0 0 5px; background: white; color: var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; border: none; }
+        .icon-btn:hover { background: #f0f0f0; }
         .link-text { text-align: center; margin-top: 15px; font-size: 14px; cursor: pointer; color: var(--primary-color); }
 
-        /* Chat Components */
+        /* User List Items */
         .header { padding: 15px; background: var(--primary-color); color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; }
         .user-list { flex: 1; overflow-y: auto; }
         .user-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
         .user-item:hover, .user-item.active { background: #eef; }
         
+        /* Chat Messages */
         .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9f9f9; }
         .message { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; font-size: 14px; line-height: 1.4; }
         .my-msg { align-self: flex-end; background: var(--primary-color); color: white; border-bottom-right-radius: 2px; }
@@ -59,14 +61,11 @@
         /* Modals */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popUp 0.3s ease; }
-        
         @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .history-item { font-size: 12px; border-bottom: 1px solid #eee; padding: 8px 0; color: #555; }
         .theme-selector { display: flex; gap: 10px; margin: 15px 0; justify-content: center; }
         .color-dot { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0,0,0,0.3); transition: transform 0.2s; }
-        .color-dot:hover { transform: scale(1.1); }
-
         .error { color: #d9534f; font-size: 13px; text-align: center; margin-top: 5px; }
         
         /* Mobile Responsive */
@@ -107,9 +106,6 @@
         <div class="sidebar">
             <div class="header">
                 <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                    <div style="width:35px; height:35px; background:rgba(255,255,255,0.3); border-radius:50%; display:flex; justify-content:center; align-items:center;">
-                        <i class="fas fa-user"></i>
-                    </div>
                     <span id="myProfileDisplay" style="font-weight:bold; white-space: nowrap;">Loading...</span>
                 </div>
                 <div style="display:flex;">
@@ -118,8 +114,7 @@
                 </div>
             </div>
             
-            <div id="friendsList" class="user-list">
-                </div>
+            <div id="friendsList" class="user-list"></div>
         </div>
 
         <div id="chatArea" class="chat-area">
@@ -151,7 +146,6 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h3>การตั้งค่า</h3>
-            
             <p style="font-size:14px; font-weight:bold; margin-bottom:5px;">เปลี่ยนธีมสี</p>
             <div class="theme-selector">
                 <div class="color-dot" style="background:#4a90e2" onclick="changeTheme('#4a90e2')"></div>
@@ -160,10 +154,8 @@
                 <div class="color-dot" style="background:#8e4ae2" onclick="changeTheme('#8e4ae2')"></div>
                 <div class="color-dot" style="background:#333333" onclick="changeTheme('#333333')"></div>
             </div>
-
             <p style="font-size:14px; font-weight:bold; margin-bottom:5px;">ประวัติการเข้าสู่ระบบ</p>
             <div id="loginHistoryList" style="max-height: 100px; overflow-y: auto; margin-bottom: 15px; background:#f9f9f9; padding:5px; border-radius:5px;"></div>
-            
             <button class="secondary-btn" style="background:#d9534f; color:white;" onclick="kickOtherSessions()"><i class="fas fa-shield-alt"></i> เตะอุปกรณ์อื่นออก</button>
             <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
             <button onclick="logout()">ออกจากระบบ</button>
@@ -218,7 +210,7 @@
             if (!uidName.startsWith('@')) return alert("ชื่อไอดีต้องขึ้นต้นด้วย @");
 
             try {
-                // ต้องแก้ Rules ใน Firebase Console ก่อนถึงจะผ่านบรรทัดนี้ได้
+                // ต้องเปิด Permission Rules ใน Firebase ก่อนถึงจะเช็คได้
                 const snapshot = await db.collection('users').where('username', '==', uidName).get();
                 if (!snapshot.empty) throw new Error("ชื่อไอดีนี้มีคนใช้แล้ว");
 
@@ -267,11 +259,10 @@
         function loadUserData() {
             db.collection('users').doc(currentUser.uid).get().then(doc => {
                 const data = doc.data();
-                document.getElementById('myProfileDisplay').innerText = `${data.nickname}`;
+                document.getElementById('myProfileDisplay').innerHTML = `${data.nickname} <small style='opacity:0.8'>${data.username}</small>`;
             });
         }
 
-        // ฟังก์ชันเปิด Modal เพิ่มเพื่อน
         function openAddFriendModal() {
             document.getElementById('addFriendModal').style.display = 'flex';
         }
@@ -310,17 +301,17 @@
                     });
                 }
                 
-                alert("เพิ่มเพื่อนเรียบร้อย!");
+                alert("เพิ่มเพื่อนเรียบร้อย! (ถ้ายังไม่ขึ้นให้ลองรีเฟรชหน้าเว็บ)");
                 document.getElementById('addFriendInput').value = "";
-                document.getElementById('addFriendModal').style.display = 'none'; // ปิด Modal
+                document.getElementById('addFriendModal').style.display = 'none';
             } catch(e) {
-                alert("เกิดข้อผิดพลาด: " + e.message + "\n(กรุณาเช็ค Permission Rules ใน Firebase)");
+                alert("เกิดข้อผิดพลาด: " + e.message + "\n(กรุณาเช็ค Rules ใน Firebase Console)");
             }
         }
 
         function loadFriends() {
+            // ลบ orderBy ออกเพื่อแก้บั๊กเพื่อนไม่ขึ้น (เพราะยังไม่ได้ทำ Index)
             db.collection('chats').where('participants', 'array-contains', currentUser.uid)
-                .orderBy('lastUpdated', 'desc')
                 .onSnapshot(snapshot => {
                     const list = document.getElementById('friendsList');
                     list.innerHTML = "";
@@ -333,18 +324,25 @@
                         const div = document.createElement('div');
                         div.className = 'user-item';
                         if(currentChatId === doc.id) div.classList.add('active');
+                        
+                        // --- ส่วนที่แก้ไข: เพิ่ม @username เข้าไปแสดงผล ---
                         div.innerHTML = `
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; justify-content:center; align-items:center; color:#555;">
                                     <i class="fas fa-user"></i>
                                 </div>
-                                <div>
-                                    <div style="font-weight:bold;">${friendData.nickname}</div>
+                                <div style="overflow:hidden;">
+                                    <div style="font-weight:bold; white-space:nowrap;">
+                                        ${friendData.nickname} 
+                                        <span style="font-size:12px; color:#666; font-weight:normal;">${friendData.username}</span>
+                                    </div>
                                     <div style="font-size:12px; color:#888;">${data.lastMessage || 'เริ่มการสนทนา'}</div>
                                 </div>
                             </div>
                             <div style="font-size:18px; color:#ccc;">›</div>
                         `;
+                        // ------------------------------------------------
+                        
                         div.onclick = () => openChat(doc.id, friendData);
                         list.appendChild(div);
                     });
@@ -354,18 +352,15 @@
         function openChat(chatId, friendData) {
             currentChatId = chatId;
             
-            // UI Update for Mobile
             if(window.innerWidth <= 600) {
                 document.getElementById('chatArea').classList.add('active');
             }
 
-            document.getElementById('chatTitle').innerText = friendData.nickname;
+            document.getElementById('chatTitle').innerHTML = `${friendData.nickname} <small>(${friendData.username})</small>`;
             document.getElementById('msgInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
             
-            // Highlight active friend
             document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-            // (Optional: add logic to highlight clicked item)
 
             db.collection('chats').doc(chatId).collection('messages')
                 .orderBy('timestamp', 'asc')
