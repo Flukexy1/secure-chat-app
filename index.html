@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Chat App (@Username Version)</title>
+    <title>Secure Chat & Video Call</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -16,150 +16,165 @@
             --chat-bg: #ffffff;
             --text-color: #333;
         }
-
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
         /* Containers */
         .container { width: 100%; max-width: 400px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
         .active-screen { display: block; }
         
-        /* Chat Layout */
+        /* Chat Screen */
         #chatScreen { max-width: 900px; width: 90%; height: 90vh; display: none; grid-template-columns: 300px 1fr; overflow: hidden; padding: 0; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: white; }
         .sidebar { background: #f7f7f7; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         .chat-area { display: flex; flex-direction: column; background: var(--chat-bg); position: relative; }
 
-        /* Forms */
-        h2 { text-align: center; color: var(--text-color); }
-        h3 { margin-top: 0; color: var(--primary-color); text-align: center; }
+        /* General UI */
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; outline: none; }
-        input:focus { border-color: var(--primary-color); }
-        
-        button { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.2s; }
+        button { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         .secondary-btn { background: #ccc; color: #333; }
         
-        /* Buttons */
-        .icon-btn { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; justify-content: center; align-items: center; font-size: 18px; margin: 0 0 0 5px; background: white; color: var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; border: none; }
-        .icon-btn:hover { background: #f0f0f0; }
-        .link-text { text-align: center; margin-top: 15px; font-size: 14px; cursor: pointer; color: var(--primary-color); }
-
-        /* User List Items */
-        .header { padding: 15px; background: var(--primary-color); color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; }
-        .user-list { flex: 1; overflow-y: auto; }
-        .user-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        /* Friend List */
+        .user-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .user-item:hover, .user-item.active { background: #eef; }
         
-        /* Chat Messages */
+        /* Chat */
+        .header { padding: 15px; background: var(--primary-color); color: white; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9f9f9; }
-        .message { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; font-size: 14px; line-height: 1.4; }
-        .my-msg { align-self: flex-end; background: var(--primary-color); color: white; border-bottom-right-radius: 2px; }
-        .their-msg { align-self: flex-start; background: #e0e0e0; color: #333; border-bottom-left-radius: 2px; }
-        
+        .message { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; font-size: 14px; }
+        .my-msg { align-self: flex-end; background: var(--primary-color); color: white; }
+        .their-msg { align-self: flex-start; background: #e0e0e0; color: #333; }
         .input-area { padding: 10px 15px; background: white; border-top: 1px solid #ddd; display: flex; gap: 10px; align-items: center; }
-        .typing-indicator { font-size: 12px; color: #888; margin-left: 20px; min-height: 20px; font-style: italic; display: flex; align-items: center; }
 
-        /* Modals */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popUp 0.3s ease; }
-        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        .history-item { font-size: 12px; border-bottom: 1px solid #eee; padding: 8px 0; color: #555; }
-        .theme-selector { display: flex; gap: 10px; margin: 15px 0; justify-content: center; }
-        .color-dot { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 3px rgba(0,0,0,0.3); transition: transform 0.2s; }
-        .error { color: #d9534f; font-size: 13px; text-align: center; margin-top: 5px; }
+        /* Video Call Modal */
+        #videoCallModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; flex-direction: column; }
+        .video-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        #remoteVideo { width: 100%; height: 100%; }
+        #localVideo { position: absolute; bottom: 20px; right: 20px; width: 120px; height: 160px; background: #333; border: 2px solid white; border-radius: 10px; z-index: 10; object-fit: cover; }
         
-        /* Mobile Responsive */
+        .call-controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 20; }
+        .call-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 24px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .btn-hangup { background: #ff4b5c; }
+        .btn-answer { background: #2ecc71; }
+        
+        /* Incoming Call Overlay */
+        #incomingCallAlert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 30px; border-radius: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 3000; display: none; align-items: center; gap: 20px; animation: slideDown 0.5s ease; }
+        @keyframes slideDown { from { top: -100px; } to { top: 20px; } }
+        .pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(74, 144, 226, 0); } 100% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0); } }
+
+        /* Modals (Friends/Settings) */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; }
+        
+        .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; background: rgba(255,255,255,0.2); border:none; color: white; font-size: 18px; margin-left: 5px; }
+        .icon-btn:hover { background: rgba(255,255,255,0.4); }
+
+        /* Mobile */
         @media (max-width: 600px) {
             #chatScreen { width: 100%; height: 100%; border-radius: 0; grid-template-columns: 1fr; }
             .sidebar { display: flex; width: 100%; height: 100%; }
             .chat-area { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 20; }
             .chat-area.active { display: flex; }
-            .back-btn { display: inline-block !important; margin-right: 10px; cursor: pointer; }
+            .back-btn { display: inline-block !important; margin-right: 10px; cursor: pointer; font-size: 20px; }
         }
-        .back-btn { display: none; color: white; font-size: 18px; }
+        .back-btn { display: none; }
     </style>
 </head>
 <body>
 
     <div id="loginScreen" class="container active-screen">
-        <h2>เข้าสู่ระบบ</h2>
+        <h2 style="text-align:center;">เข้าสู่ระบบ</h2>
         <input type="email" id="loginEmail" placeholder="อีเมล">
         <input type="password" id="loginPass" placeholder="รหัสผ่าน">
+        <div style="text-align:right; font-size:12px; margin-bottom:10px; cursor:pointer; color:#666;" onclick="resetPassword()">ลืมรหัสผ่าน?</div>
         <button onclick="login()">เข้าสู่ระบบ</button>
-        <p class="link-text" onclick="showScreen('registerScreen')">ยังไม่มีบัญชี? สร้างบัญชีใหม่</p>
-        <p id="loginError" class="error"></p>
+        <p style="text-align:center; margin-top:15px; font-size:14px; color:var(--primary-color); cursor:pointer;" onclick="showScreen('registerScreen')">สร้างบัญชีใหม่</p>
+        <p id="loginError" style="color:red; text-align:center; font-size:12px;"></p>
     </div>
 
     <div id="registerScreen" class="container">
-        <h2>สร้างบัญชีใหม่</h2>
-        <input type="text" id="regUid" placeholder="ชื่อไอดี (@username)" pattern="^@.*" title="ต้องขึ้นต้นด้วย @">
+        <h2 style="text-align:center;">สร้างบัญชีใหม่</h2>
+        <input type="text" id="regUid" placeholder="ชื่อไอดี (@username)" pattern="^@.*">
         <input type="text" id="regNickname" placeholder="ชื่อเล่น">
         <input type="email" id="regEmail" placeholder="อีเมล">
         <input type="password" id="regPass" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
         <input type="password" id="regConfirmPass" placeholder="ยืนยันรหัสผ่าน">
         <button onclick="register()">สมัครสมาชิก</button>
-        <button class="secondary-btn" onclick="showScreen('loginScreen')">กลับไปหน้าล็อกอิน</button>
-        <p id="regError" class="error"></p>
+        <button class="secondary-btn" onclick="showScreen('loginScreen')" style="margin-top:10px;">กลับไปหน้าล็อกอิน</button>
+        <p id="regError" style="color:red; text-align:center; font-size:12px;"></p>
     </div>
 
     <div id="chatScreen">
         <div class="sidebar">
             <div class="header">
-                <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                    <span id="myProfileDisplay" style="font-weight:bold; white-space: nowrap;">Loading...</span>
-                </div>
+                <span id="myProfileDisplay" style="font-weight:bold;">Loading...</span>
                 <div style="display:flex;">
-                    <button class="icon-btn" onclick="openAddFriendModal()" title="เพิ่มเพื่อน"><i class="fas fa-plus"></i></button>
-                    <button class="icon-btn" onclick="openSettings()" title="ตั้งค่า"><i class="fas fa-cog"></i></button>
+                    <button class="icon-btn" onclick="openAddFriendModal()"><i class="fas fa-plus"></i></button>
+                    <button class="icon-btn" onclick="openSettings()"><i class="fas fa-cog"></i></button>
                 </div>
             </div>
-            
-            <div id="friendsList" class="user-list"></div>
+            <div id="friendsList" style="flex:1; overflow-y:auto;"></div>
         </div>
 
         <div id="chatArea" class="chat-area">
-            <div class="header" id="chatHeader" style="background: white; color: #333; border-bottom: 1px solid #ddd;">
+            <div class="header" id="chatHeader" style="background:white; color:#333; border-bottom:1px solid #ddd;">
                 <div style="display:flex; align-items:center;">
-                    <i class="fas fa-arrow-left back-btn" style="color:#333;" onclick="closeChatMobile()"></i>
+                    <i class="fas fa-arrow-left back-btn" onclick="closeChatMobile()"></i>
                     <span id="chatTitle">เลือกเพื่อนเพื่อเริ่มคุย</span>
                 </div>
+                <button id="callBtn" class="icon-btn" style="background:transparent; color:#4a90e2; display:none;" onclick="startCallClick()">
+                    <i class="fas fa-video" style="font-size:20px;"></i>
+                </button>
             </div>
             <div id="messagesList" class="messages"></div>
-            <div id="typingIndicator" class="typing-indicator"></div>
+            <div id="typingIndicator" style="padding:0 20px; font-size:12px; color:#888; font-style:italic;"></div>
             <div class="input-area">
                 <input type="text" id="msgInput" placeholder="พิมพ์ข้อความ..." disabled oninput="onTyping()">
-                <button onclick="sendMessage()" style="width: auto; margin:0; padding: 10px 20px;" id="sendBtn" disabled><i class="fas fa-paper-plane"></i></button>
+                <button onclick="sendMessage()" id="sendBtn" disabled style="width:auto; margin:0;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
     </div>
 
+    <div id="videoCallModal">
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <video id="localVideo" autoplay playsinline muted></video>
+            <div class="call-controls">
+                <button class="call-btn btn-hangup" onclick="hangUp()"><i class="fas fa-phone-slash"></i></button>
+            </div>
+            <div id="callStatusText" style="position:absolute; top:50px; color:white; background:rgba(0,0,0,0.5); padding:10px 20px; border-radius:20px;">Connecting...</div>
+        </div>
+    </div>
+
+    <div id="incomingCallAlert">
+        <div class="pulse" style="width:40px; height:40px; background:#4a90e2; border-radius:50%; display:flex; justify-content:center; align-items:center; color:white;">
+            <i class="fas fa-video"></i>
+        </div>
+        <div>
+            <div style="font-weight:bold;">สายเข้า...</div>
+            <div id="incomingCallerName" style="font-size:12px; color:#666;">Unknown</div>
+        </div>
+        <button onclick="answerCall()" style="background:#2ecc71; width:auto; padding:8px 15px; font-size:14px;">รับสาย</button>
+        <button onclick="rejectCall()" style="background:#ff4b5c; width:auto; padding:8px 15px; font-size:14px;">วางสาย</button>
+    </div>
+
     <div id="addFriendModal" class="modal">
         <div class="modal-content">
-            <h3><i class="fas fa-user-plus"></i> เพิ่มเพื่อนใหม่</h3>
-            <p style="text-align:center; font-size:14px; color:#666; margin-bottom:15px;">ค้นหาเพื่อนด้วย @username หรือ Email</p>
-            <input type="text" id="addFriendInput" placeholder="เช่น @somchai หรือ email@test.com">
+            <h3>เพิ่มเพื่อนใหม่</h3>
+            <input type="text" id="addFriendInput" placeholder="ค้นหาด้วย @username หรือ Email">
             <button onclick="addFriend()">เพิ่มเพื่อน</button>
-            <button class="secondary-btn" onclick="document.getElementById('addFriendModal').style.display='none'">ยกเลิก</button>
+            <button class="secondary-btn" onclick="document.getElementById('addFriendModal').style.display='none'">ปิด</button>
         </div>
     </div>
 
     <div id="settingsModal" class="modal">
         <div class="modal-content">
-            <h3>การตั้งค่า</h3>
-            <p style="font-size:14px; font-weight:bold; margin-bottom:5px;">เปลี่ยนธีมสี</p>
-            <div class="theme-selector">
-                <div class="color-dot" style="background:#4a90e2" onclick="changeTheme('#4a90e2')"></div>
-                <div class="color-dot" style="background:#e24a4a" onclick="changeTheme('#e24a4a')"></div>
-                <div class="color-dot" style="background:#4ae296" onclick="changeTheme('#4ae296')"></div>
-                <div class="color-dot" style="background:#8e4ae2" onclick="changeTheme('#8e4ae2')"></div>
-                <div class="color-dot" style="background:#333333" onclick="changeTheme('#333333')"></div>
-            </div>
-            <p style="font-size:14px; font-weight:bold; margin-bottom:5px;">ประวัติการเข้าสู่ระบบ</p>
-            <div id="loginHistoryList" style="max-height: 100px; overflow-y: auto; margin-bottom: 15px; background:#f9f9f9; padding:5px; border-radius:5px;"></div>
-            <button class="secondary-btn" style="background:#d9534f; color:white;" onclick="kickOtherSessions()"><i class="fas fa-shield-alt"></i> เตะอุปกรณ์อื่นออก</button>
-            <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+            <h3>ตั้งค่า</h3>
+            <button style="background:#d9534f;" onclick="kickOtherSessions()">เตะอุปกรณ์อื่นออก</button>
+            <hr>
             <button onclick="logout()">ออกจากระบบ</button>
-            <button class="secondary-btn" onclick="closeSettings()">ปิด</button>
+            <button class="secondary-btn" onclick="document.getElementById('settingsModal').style.display='none'">ปิด</button>
         </div>
     </div>
 
@@ -179,9 +194,20 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // WebRTC Configuration (ใช้ STUN ฟรีของ Google)
+        const rtcConfig = {
+            iceServers: [
+                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
+            ],
+            iceCandidatePoolSize: 10,
+        };
+
         let currentUser = null;
         let currentChatId = null;
-        let typingTimeout = null;
+        let pc = null; // PeerConnection
+        let localStream = null;
+        let remoteStream = null;
+        let unsubscribeCall = null; // Listener สำหรับวางสาย
 
         // --- 2. AUTHENTICATION ---
         auth.onAuthStateChanged(user => {
@@ -189,7 +215,7 @@
                 currentUser = user;
                 loadUserData();
                 loadFriends();
-                logSession();
+                listenForIncomingCalls(); // เริ่มดักฟังสัญญาณโทรศัพท์
                 showScreen('chatScreen');
                 document.getElementById('chatScreen').style.display = 'grid';
             } else {
@@ -199,151 +225,60 @@
             }
         });
 
-        async function register() {
-            const uidName = document.getElementById('regUid').value.trim();
-            const nickname = document.getElementById('regNickname').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const pass = document.getElementById('regPass').value;
-            const confirmPass = document.getElementById('regConfirmPass').value;
-
-            if (pass !== confirmPass) return alert("รหัสผ่านไม่ตรงกัน");
-            if (!uidName.startsWith('@')) return alert("ชื่อไอดีต้องขึ้นต้นด้วย @");
-
-            try {
-                // ต้องเปิด Permission Rules ใน Firebase ก่อนถึงจะเช็คได้
-                const snapshot = await db.collection('users').where('username', '==', uidName).get();
-                if (!snapshot.empty) throw new Error("ชื่อไอดีนี้มีคนใช้แล้ว");
-
-                const userCred = await auth.createUserWithEmailAndPassword(email, pass);
-                await db.collection('users').doc(userCred.user.uid).set({
-                    username: uidName,
-                    nickname: nickname,
-                    email: email,
-                    uid: userCred.user.uid,
-                    sessionId: Date.now()
-                });
-                alert("สมัครสมาชิกสำเร็จ!");
-            } catch (error) {
-                document.getElementById('regError').innerText = error.message;
-            }
-        }
-
         async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPass').value;
             try {
-                await auth.signInWithEmailAndPassword(email, pass);
-                await db.collection('users').doc(auth.currentUser.uid).update({ sessionId: Date.now() });
-            } catch (error) {
-                document.getElementById('loginError').innerText = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-            }
+                await auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
+            } catch(e) { document.getElementById('loginError').innerText = "รหัสผิด หรือไม่มีบัญชี"; }
         }
-
+        async function register() {
+            try {
+                const uidName = document.getElementById('regUid').value.trim();
+                if (!uidName.startsWith('@')) return alert("ไอดีต้องมี @");
+                // Check dup
+                const check = await db.collection('users').where('username', '==', uidName).get();
+                if(!check.empty) return alert("ชื่อนี้มีคนใช้แล้ว");
+                
+                const cred = await auth.createUserWithEmailAndPassword(document.getElementById('regEmail').value, document.getElementById('regPass').value);
+                await db.collection('users').doc(cred.user.uid).set({
+                    username: uidName,
+                    nickname: document.getElementById('regNickname').value,
+                    email: document.getElementById('regEmail').value,
+                    uid: cred.user.uid
+                });
+                alert("สำเร็จ!");
+            } catch(e) { document.getElementById('regError').innerText = e.message; }
+        }
+        function resetPassword() {
+            const email = prompt("ใส่อีเมลของคุณ:");
+            if(email) auth.sendPasswordResetEmail(email).then(()=>alert("ส่งลิงก์ไปที่เมลแล้ว")).catch(e=>alert(e.message));
+        }
         function logout() { auth.signOut(); }
 
-        function logSession() {
-            if(!currentUser) return;
-            db.collection('users').doc(currentUser.uid).collection('loginHistory').add({
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                device: navigator.userAgent
-            });
-        }
-
-        async function kickOtherSessions() {
-            if(!currentUser) return;
-            await db.collection('users').doc(currentUser.uid).update({ sessionId: Date.now() });
-            alert("รีเซ็ต Session เรียบร้อย!");
-        }
-
         // --- 3. CHAT LOGIC ---
-        function loadUserData() {
-            db.collection('users').doc(currentUser.uid).get().then(doc => {
-                const data = doc.data();
-                document.getElementById('myProfileDisplay').innerHTML = `${data.nickname} <small style='opacity:0.8'>${data.username}</small>`;
-            });
-        }
-
-        function openAddFriendModal() {
-            document.getElementById('addFriendModal').style.display = 'flex';
-        }
-
-        async function addFriend() {
-            const input = document.getElementById('addFriendInput').value.trim();
-            if(!input) return;
-
-            try {
-                let query;
-                if (input.includes('@')) {
-                    query = db.collection('users').where('username', '==', input);
-                } else {
-                    query = db.collection('users').where('email', '==', input);
-                }
-
-                const snapshot = await query.get();
-                if (snapshot.empty) return alert("ไม่พบผู้ใช้");
-
-                const friendData = snapshot.docs[0].data();
-                if (friendData.uid === currentUser.uid) return alert("เพิ่มตัวเองไม่ได้");
-                
-                const chatCheck = await db.collection('chats').where('participants', 'array-contains', currentUser.uid).get();
-                let existingChat = null;
-                chatCheck.forEach(doc => {
-                    const data = doc.data();
-                    if (data.participants.includes(friendData.uid)) existingChat = doc.id;
-                });
-
-                if (!existingChat) {
-                    await db.collection('chats').add({
-                        participants: [currentUser.uid, friendData.uid],
-                        lastMessage: "",
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                        typing: {} 
-                    });
-                }
-                
-                alert("เพิ่มเพื่อนเรียบร้อย! (ถ้ายังไม่ขึ้นให้ลองรีเฟรชหน้าเว็บ)");
-                document.getElementById('addFriendInput').value = "";
-                document.getElementById('addFriendModal').style.display = 'none';
-            } catch(e) {
-                alert("เกิดข้อผิดพลาด: " + e.message + "\n(กรุณาเช็ค Rules ใน Firebase Console)");
-            }
-        }
-
         function loadFriends() {
-            // ลบ orderBy ออกเพื่อแก้บั๊กเพื่อนไม่ขึ้น (เพราะยังไม่ได้ทำ Index)
-            db.collection('chats').where('participants', 'array-contains', currentUser.uid)
+             db.collection('chats').where('participants', 'array-contains', currentUser.uid)
                 .onSnapshot(snapshot => {
                     const list = document.getElementById('friendsList');
                     list.innerHTML = "";
                     snapshot.forEach(async doc => {
                         const data = doc.data();
-                        const friendUid = data.participants.find(uid => uid !== currentUser.uid);
-                        const friendDoc = await db.collection('users').doc(friendUid).get();
-                        const friendData = friendDoc.data();
-
+                        const friendUid = data.participants.find(id => id !== currentUser.uid);
+                        const fDoc = await db.collection('users').doc(friendUid).get();
+                        const fData = fDoc.data();
+                        
                         const div = document.createElement('div');
                         div.className = 'user-item';
                         if(currentChatId === doc.id) div.classList.add('active');
-                        
-                        // --- ส่วนที่แก้ไข: เพิ่ม @username เข้าไปแสดงผล ---
                         div.innerHTML = `
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; justify-content:center; align-items:center; color:#555;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div style="overflow:hidden;">
-                                    <div style="font-weight:bold; white-space:nowrap;">
-                                        ${friendData.nickname} 
-                                        <span style="font-size:12px; color:#666; font-weight:normal;">${friendData.username}</span>
-                                    </div>
-                                    <div style="font-size:12px; color:#888;">${data.lastMessage || 'เริ่มการสนทนา'}</div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <b>${fData.nickname}</b> <span style="font-size:12px; color:#888;">${fData.username}</span><br>
+                                    <span style="font-size:12px; color:#aaa;">${data.lastMessage || '...'}</span>
                                 </div>
                             </div>
-                            <div style="font-size:18px; color:#ccc;">›</div>
                         `;
-                        // ------------------------------------------------
-                        
-                        div.onclick = () => openChat(doc.id, friendData);
+                        div.onclick = () => openChat(doc.id, fData);
                         list.appendChild(div);
                     });
                 });
@@ -351,110 +286,237 @@
 
         function openChat(chatId, friendData) {
             currentChatId = chatId;
+            if(window.innerWidth <= 600) document.getElementById('chatArea').classList.add('active');
             
-            if(window.innerWidth <= 600) {
-                document.getElementById('chatArea').classList.add('active');
-            }
-
-            document.getElementById('chatTitle').innerHTML = `${friendData.nickname} <small>(${friendData.username})</small>`;
+            document.getElementById('chatTitle').innerText = friendData.nickname;
+            document.getElementById('callBtn').style.display = 'block'; // โชว์ปุ่มโทร
             document.getElementById('msgInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
             
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
-
-            db.collection('chats').doc(chatId).collection('messages')
-                .orderBy('timestamp', 'asc')
-                .onSnapshot(snapshot => {
-                    const msgList = document.getElementById('messagesList');
-                    msgList.innerHTML = "";
-                    snapshot.forEach(doc => {
-                        const msg = doc.data();
-                        const div = document.createElement('div');
-                        div.className = `message ${msg.senderId === currentUser.uid ? 'my-msg' : 'their-msg'}`;
-                        div.innerText = msg.text;
-                        msgList.appendChild(div);
-                    });
-                    msgList.scrollTop = msgList.scrollHeight;
+            // Load messages
+            db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot(snap => {
+                const div = document.getElementById('messagesList');
+                div.innerHTML = "";
+                snap.forEach(d => {
+                    const m = d.data();
+                    div.innerHTML += `<div class="message ${m.senderId===currentUser.uid?'my-msg':'their-msg'}">${m.text}</div>`;
                 });
+                div.scrollTop = div.scrollHeight;
+            });
+        }
+        
+        async function sendMessage() {
+            const txt = document.getElementById('msgInput').value;
+            if(!txt || !currentChatId) return;
+            await db.collection('chats').doc(currentChatId).collection('messages').add({
+                text: txt, senderId: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection('chats').doc(currentChatId).update({ lastMessage: txt });
+            document.getElementById('msgInput').value = "";
+        }
 
-            db.collection('chats').doc(chatId).onSnapshot(doc => {
-                const data = doc.data();
-                const typingStatus = document.getElementById('typingIndicator');
-                const otherUid = friendData.uid;
-                if (data.typing && data.typing[otherUid]) {
-                    typingStatus.innerText = `${friendData.nickname} กำลังพิมพ์...`;
-                } else {
-                    typingStatus.innerText = "";
+        // --- 4. WEBRTC VIDEO CALL LOGIC (CORE) ---
+
+        // เริ่มต้นการโทร (ผู้โทร)
+        async function startCallClick() {
+            document.getElementById('videoCallModal').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "กำลังเริ่มกล้อง...";
+
+            // 1. Setup Local Stream
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            document.getElementById('remoteVideo').srcObject = new MediaStream();
+
+            // 2. Create PC
+            pc = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.ontrack = event => {
+                event.streams[0].getTracks().forEach(track => document.getElementById('remoteVideo').srcObject.addTrack(track));
+            };
+
+            // 3. Create Offer
+            const callDoc = db.collection('chats').doc(currentChatId).collection('calls').doc();
+            const offerCandidates = callDoc.collection('offerCandidates');
+            const answerCandidates = callDoc.collection('answerCandidates');
+
+            pc.onicecandidate = event => {
+                if(event.candidate) offerCandidates.add(event.candidate.toJSON());
+            };
+
+            const offerDescription = await pc.createOffer();
+            await pc.setLocalDescription(offerDescription);
+
+            const offer = {
+                sdp: offerDescription.sdp,
+                type: offerDescription.type,
+            };
+
+            await callDoc.set({ offer, callerId: currentUser.uid });
+            document.getElementById('callStatusText').innerText = "กำลังโทรออก...";
+
+            // 4. Listen for Answer
+            callDoc.onSnapshot(snapshot => {
+                const data = snapshot.data();
+                if (!pc.currentRemoteDescription && data?.answer) {
+                    const answerDescription = new RTCSessionDescription(data.answer);
+                    pc.setRemoteDescription(answerDescription);
+                    document.getElementById('callStatusText').innerText = "เชื่อมต่อแล้ว!";
                 }
             });
-        }
 
-        function closeChatMobile() {
-            document.getElementById('chatArea').classList.remove('active');
-            currentChatId = null;
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('msgInput');
-            const text = input.value.trim();
-            if (!text || !currentChatId) return;
-
-            await db.collection('chats').doc(currentChatId).collection('messages').add({
-                text: text,
-                senderId: currentUser.uid,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            answerCandidates.onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const candidate = new RTCIceCandidate(change.doc.data());
+                        pc.addIceCandidate(candidate);
+                    }
+                });
             });
 
-            await db.collection('chats').doc(currentChatId).update({
-                lastMessage: text,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                [`typing.${currentUser.uid}`]: false
-            });
-
-            input.value = "";
+            // Handle Hangup from UI
+            window.currentCallId = callDoc.id;
         }
 
-        function onTyping() {
-            if (!currentChatId) return;
-            db.collection('chats').doc(currentChatId).update({ [`typing.${currentUser.uid}`]: true });
-            if (typingTimeout) clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                db.collection('chats').doc(currentChatId).update({ [`typing.${currentUser.uid}`]: false });
-            }, 2000);
+        // ดักฟังสายเข้า (ผู้รับ)
+        function listenForIncomingCalls() {
+            // ฟังทุกห้องแชทที่เราอยู่
+            db.collection('chats').where('participants', 'array-contains', currentUser.uid).onSnapshot(snapshot => {
+                snapshot.forEach(doc => {
+                    // ฟัง subcollection 'calls'
+                    db.collection('chats').doc(doc.id).collection('calls').where('offer', '!=', null).onSnapshot(callSnap => {
+                        callSnap.docChanges().forEach(change => {
+                            if (change.type === 'added') {
+                                const data = change.doc.data();
+                                // ถ้าเราไม่ใช่คนโทร และยังไม่ได้ตอบรับ
+                                if (data.callerId !== currentUser.uid && !data.answer) {
+                                    showIncomingCall(doc.id, change.doc.id, data.callerId);
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        async function showIncomingCall(chatId, callId, callerUid) {
+            const callerDoc = await db.collection('users').doc(callerUid).get();
+            document.getElementById('incomingCallerName').innerText = callerDoc.data().nickname;
+            document.getElementById('incomingCallAlert').style.display = 'flex';
+            
+            // Save temp IDs to answer
+            window.incomingCallData = { chatId, callId };
+        }
+
+        // รับสาย
+        async function answerCall() {
+            document.getElementById('incomingCallAlert').style.display = 'none';
+            document.getElementById('videoCallModal').style.display = 'flex';
+            const { chatId, callId } = window.incomingCallData;
+            window.currentCallId = callId;
+            currentChatId = chatId; // switch context
+
+            const callDoc = db.collection('chats').doc(chatId).collection('calls').doc(callId);
+            const answerCandidates = callDoc.collection('answerCandidates');
+            const offerCandidates = callDoc.collection('offerCandidates');
+
+            // 1. Setup Local Stream
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            document.getElementById('remoteVideo').srcObject = new MediaStream();
+
+            // 2. Create PC
+            pc = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.ontrack = event => {
+                event.streams[0].getTracks().forEach(track => document.getElementById('remoteVideo').srcObject.addTrack(track));
+            };
+
+            pc.onicecandidate = event => {
+                if(event.candidate) answerCandidates.add(event.candidate.toJSON());
+            };
+
+            // 3. Fetch Offer & Create Answer
+            const callData = (await callDoc.get()).data();
+            const offerDescription = callData.offer;
+            await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+
+            const answerDescription = await pc.createAnswer();
+            await pc.setLocalDescription(answerDescription);
+
+            const answer = {
+                type: answerDescription.type,
+                sdp: answerDescription.sdp,
+            };
+
+            await callDoc.update({ answer });
+            document.getElementById('callStatusText').innerText = "เชื่อมต่อแล้ว!";
+
+            // 4. Listen for Remote ICE
+            offerCandidates.onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const candidate = new RTCIceCandidate(change.doc.data());
+                        pc.addIceCandidate(candidate);
+                    }
+                });
+            });
+        }
+
+        function rejectCall() {
+            document.getElementById('incomingCallAlert').style.display = 'none';
+        }
+
+        async function hangUp() {
+            // Stop Video
+            if(localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if(pc) {
+                pc.close();
+            }
+            pc = null;
+            localStream = null;
+
+            // Close UI
+            document.getElementById('videoCallModal').style.display = 'none';
+
+            // Delete call doc (Signaling cleanup)
+            if(window.currentCallId && currentChatId) {
+                await db.collection('chats').doc(currentChatId).collection('calls').doc(window.currentCallId).delete();
+            }
+            window.location.reload(); // Simple reset
         }
 
         // --- Utilities ---
         function showScreen(id) {
-            document.querySelectorAll('.container').forEach(d => d.style.display = 'none');
-            document.querySelectorAll('.active-screen').forEach(d => d.classList.remove('active-screen'));
-            const target = document.getElementById(id);
-            if(id === 'chatScreen') target.style.display = 'grid';
-            else target.style.display = 'block';
+            document.querySelectorAll('.container').forEach(d=>d.style.display='none');
+            document.querySelectorAll('.active-screen').forEach(d=>d.classList.remove('active-screen'));
+            document.getElementById(id).style.display = (id==='chatScreen')?'grid':'block';
         }
-
-        function openSettings() {
-            document.getElementById('settingsModal').style.display = 'flex';
-            const list = document.getElementById('loginHistoryList');
-            list.innerHTML = "Loading...";
-            db.collection('users').doc(currentUser.uid).collection('loginHistory')
-                .orderBy('timestamp', 'desc').limit(5).get().then(snap => {
-                    list.innerHTML = "";
-                    snap.forEach(doc => {
-                        const data = doc.data();
-                        const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Now';
-                        list.innerHTML += `<div class="history-item">${date} - ${data.device}</div>`;
-                    });
-                });
+        function openAddFriendModal() { document.getElementById('addFriendModal').style.display='flex'; }
+        function openSettings() { document.getElementById('settingsModal').style.display='flex'; }
+        function closeChatMobile() { document.getElementById('chatArea').classList.remove('active'); }
+        function loadUserData() { db.collection('users').doc(currentUser.uid).get().then(d=>document.getElementById('myProfileDisplay').innerText = d.data().nickname); }
+        async function addFriend() {
+            const val = document.getElementById('addFriendInput').value;
+            let q = val.includes('@') ? db.collection('users').where('username','==',val) : db.collection('users').where('email','==',val);
+            const snap = await q.get();
+            if(snap.empty) return alert('ไม่พบ');
+            const uid = snap.docs[0].id;
+            if(uid === currentUser.uid) return alert('เพิ่มตัวเองไม่ได้');
+            // Check existing
+            const ex = await db.collection('chats').where('participants','array-contains',currentUser.uid).get();
+            let found = false;
+            ex.forEach(d => { if(d.data().participants.includes(uid)) found = true; });
+            if(!found) {
+                await db.collection('chats').add({ participants:[currentUser.uid, uid], lastMessage:'', lastUpdated: firebase.firestore.FieldValue.serverTimestamp() });
+                alert('เพิ่มแล้ว');
+                document.getElementById('addFriendModal').style.display='none';
+            } else { alert('มีเพื่อนคนนี้แล้ว'); }
         }
-        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-        
-        function changeTheme(color) {
-            document.documentElement.style.setProperty('--primary-color', color);
-            localStorage.setItem('chatTheme', color);
-        }
-        const savedTheme = localStorage.getItem('chatTheme');
-        if(savedTheme) changeTheme(savedTheme);
+        async function kickOtherSessions() { await db.collection('users').doc(currentUser.uid).update({sessionId: Date.now()}); alert('เรียบร้อย'); }
 
     </script>
 </body>
 </html>
+    
