@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App (Notifications Enabled)</title>
+    <title>Chat App Ultimate (Video & Notify)</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -55,7 +55,6 @@
         .call-controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 20; }
         .call-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 24px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .btn-hangup { background: #ff4b5c; }
-        .btn-answer { background: #2ecc71; }
         
         /* Incoming Call/Msg Overlay */
         #incomingCallAlert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 30px; border-radius: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 3000; display: none; align-items: center; gap: 20px; animation: slideDown 0.5s ease; }
@@ -63,10 +62,9 @@
         .pulse { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(74, 144, 226, 0); } 100% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0); } }
 
-        /* Modals (Friends/Settings) */
+        /* Modals */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; }
-        
         .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; background: rgba(255,255,255,0.2); border:none; color: white; font-size: 18px; margin-left: 5px; }
         .icon-btn:hover { background: rgba(255,255,255,0.4); }
 
@@ -128,9 +126,8 @@
                 </button>
             </div>
             <div id="messagesList" class="messages"></div>
-            <div id="typingIndicator" style="padding:0 20px; font-size:12px; color:#888; font-style:italic;"></div>
             <div class="input-area">
-                <input type="text" id="msgInput" placeholder="พิมพ์ข้อความ..." disabled oninput="onTyping()">
+                <input type="text" id="msgInput" placeholder="พิมพ์ข้อความ..." disabled>
                 <button onclick="sendMessage()" id="sendBtn" disabled style="width:auto; margin:0;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
@@ -182,7 +179,6 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyAttTgBuOobClJZYheeEQNCRYnS8ZwRMh4",
             authDomain: "fluke-1e8d0.firebaseapp.com",
@@ -196,25 +192,19 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-
-        // WebRTC Config
         const rtcConfig = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302'] }], iceCandidatePoolSize: 10 };
 
-        let currentUser = null;
-        let currentChatId = null;
-        let pc = null;
-        let localStream = null;
-        
-        // --- 2. AUTHENTICATION ---
+        let currentUser = null, currentChatId = null, pc = null, localStream = null;
+
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 loadUserData();
-                loadFriends(); // ระบบแจ้งเตือนอยู่ในนี้
+                loadFriends();
                 listenForIncomingCalls();
                 showScreen('chatScreen');
                 document.getElementById('chatScreen').style.display = 'grid';
-                requestNotifPermission(); // ขออนุญาตแจ้งเตือนทันทีที่ล็อกอิน
+                requestNotifPermission();
             } else {
                 currentUser = null;
                 showScreen('loginScreen');
@@ -243,80 +233,188 @@
         }
         function logout() { auth.signOut(); }
 
-        // --- 3. CHAT & NOTIFICATIONS ---
-        
-        // ขออนุญาตแจ้งเตือน
-        function requestNotifPermission() {
-            if (!("Notification" in window)) return;
-            if (Notification.permission !== "granted") {
-                Notification.requestPermission();
-            }
-        }
-
-        // เล่นเสียงและแสดงแจ้งเตือน
+        function requestNotifPermission() { if("Notification" in window && Notification.permission !== "granted") Notification.requestPermission(); }
         function notifyUser(senderName, message) {
-            // เล่นเสียง
             const sound = document.getElementById('notifSound');
-            if(sound) { sound.currentTime = 0; sound.play().catch(e => console.log('Audio blocked needs interaction')); }
-            
-            // แสดง Notification บนจอ (ถ้าไม่ได้เปิดหน้าแชทนั้นอยู่ หรือพับหน้าจอ)
-            if (document.hidden || !document.hasFocus()) {
-                if (Notification.permission === "granted") {
-                    new Notification("ข้อความใหม่จาก " + senderName, {
-                        body: message,
-                        icon: "https://cdn-icons-png.flaticon.com/512/1041/1041916.png" // ไอคอนแชท
-                    });
-                }
+            if(sound) { sound.currentTime = 0; sound.play().catch(e => {}); }
+            if ((document.hidden || !document.hasFocus()) && Notification.permission === "granted") {
+                new Notification("ข้อความใหม่จาก " + senderName, { body: message });
             }
         }
 
         function loadFriends() {
-             db.collection('chats').where('participants', 'array-contains', currentUser.uid)
-                .onSnapshot(snapshot => {
-                    const list = document.getElementById('friendsList');
-                    list.innerHTML = "";
-                    
-                    // ตรวจจับการเปลี่ยนแปลงเพื่อแจ้งเตือน
-                    snapshot.docChanges().forEach(async change => {
-                        if (change.type === 'modified') {
-                            const data = change.doc.data();
-                            // ถ้ามีข้อความใหม่ และคนส่งไม่ใช่เรา และเราไม่ได้เปิดแชทนี้อยู่
-                            if (data.lastSenderId && data.lastSenderId !== currentUser.uid) {
-                                // ถ้าเป็นข้อความล่าสุดจริงๆ (กันแจ้งเตือนเก่า)
-                                const now = Date.now();
-                                const msgTime = data.lastUpdated ? data.lastUpdated.toMillis() : 0;
-                                if (now - msgTime < 10000 && currentChatId !== change.doc.id) { // เช็คเวลา < 10 วิ
-                                    // หาชื่อเพื่อน
-                                    const fid = data.participants.find(id => id !== currentUser.uid);
-                                    const fDoc = await db.collection('users').doc(fid).get();
-                                    notifyUser(fDoc.data().nickname, data.lastMessage);
-                                }
+             db.collection('chats').where('participants', 'array-contains', currentUser.uid).onSnapshot(snapshot => {
+                const list = document.getElementById('friendsList');
+                list.innerHTML = "";
+                snapshot.docChanges().forEach(async change => {
+                    if (change.type === 'modified') {
+                        const data = change.doc.data();
+                        if (data.lastSenderId && data.lastSenderId !== currentUser.uid) {
+                            const now = Date.now();
+                            const msgTime = data.lastUpdated ? data.lastUpdated.toMillis() : 0;
+                            if (now - msgTime < 10000 && currentChatId !== change.doc.id) {
+                                const fid = data.participants.find(id => id !== currentUser.uid);
+                                const fDoc = await db.collection('users').doc(fid).get();
+                                notifyUser(fDoc.data().nickname, data.lastMessage);
                             }
                         }
-                    });
-
-                    // Render List
-                    snapshot.forEach(async doc => {
-                        const data = doc.data();
-                        const friendUid = data.participants.find(id => id !== currentUser.uid);
-                        const fDoc = await db.collection('users').doc(friendUid).get();
-                        const fData = fDoc.data();
-                        
-                        const div = document.createElement('div');
-                        div.className = 'user-item';
-                        if(currentChatId === doc.id) div.classList.add('active');
-                        div.innerHTML = `
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-user"></i></div>
-                                <div>
-                                    <b>${fData.nickname}</b> <span style="font-size:12px; color:#888;">${fData.username}</span><br>
-                                    <span style="font-size:12px; color:#aaa;">${data.lastMessage || '...'}</span>
-                                </div>
-                            </div>
-                        `;
-                        div.onclick = () => openChat(doc.id, fData);
-                        list.appendChild(div);
-                    });
+                    }
                 });
+                snapshot.forEach(async doc => {
+                    const data = doc.data();
+                    const friendUid = data.participants.find(id => id !== currentUser.uid);
+                    const fDoc = await db.collection('users').doc(friendUid).get();
+                    const fData = fDoc.data();
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    if(currentChatId === doc.id) div.classList.add('active');
+                    div.innerHTML = `<div style="display:flex; gap:10px; align-items:center;">
+                        <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fas fa-user"></i></div>
+                        <div><b>${fData.nickname}</b> <span style="font-size:12px; color:#888;">${fData.username}</span><br><span style="font-size:12px; color:#aaa;">${data.lastMessage || '...'}</span></div>
+                    </div>`;
+                    div.onclick = () => openChat(doc.id, fData);
+                    list.appendChild(div);
+                });
+            });
         }
 
+        function openChat(chatId, friendData) {
+            currentChatId = chatId;
+            if(window.innerWidth <= 600) document.getElementById('chatArea').classList.add('active');
+            document.getElementById('chatTitle').innerText = friendData.nickname;
+            document.getElementById('callBtn').style.display = 'block';
+            document.getElementById('msgInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot(snap => {
+                const div = document.getElementById('messagesList');
+                div.innerHTML = "";
+                snap.forEach(d => {
+                    const m = d.data();
+                    div.innerHTML += `<div class="message ${m.senderId===currentUser.uid?'my-msg':'their-msg'}">${m.text}</div>`;
+                });
+                div.scrollTop = div.scrollHeight;
+            });
+        }
+        
+        async function sendMessage() {
+            const txt = document.getElementById('msgInput').value;
+            if(!txt || !currentChatId) return;
+            await db.collection('chats').doc(currentChatId).collection('messages').add({ text: txt, senderId: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            await db.collection('chats').doc(currentChatId).update({ lastMessage: txt, lastSenderId: currentUser.uid, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() });
+            document.getElementById('msgInput').value = "";
+        }
+
+        async function startCallClick() {
+            document.getElementById('videoCallModal').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "กำลังเริ่มกล้อง...";
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            document.getElementById('remoteVideo').srcObject = new MediaStream();
+            pc = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.ontrack = event => event.streams[0].getTracks().forEach(track => document.getElementById('remoteVideo').srcObject.addTrack(track));
+            const callDoc = db.collection('chats').doc(currentChatId).collection('calls').doc();
+            pc.onicecandidate = event => { if(event.candidate) callDoc.collection('offerCandidates').add(event.candidate.toJSON()); };
+            const offerDescription = await pc.createOffer();
+            await pc.setLocalDescription(offerDescription);
+            await callDoc.set({ offer: {sdp: offerDescription.sdp, type: offerDescription.type}, callerId: currentUser.uid });
+            document.getElementById('callStatusText').innerText = "กำลังโทรออก...";
+            callDoc.onSnapshot(snapshot => {
+                const data = snapshot.data();
+                if (!pc.currentRemoteDescription && data?.answer) {
+                    pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    document.getElementById('callStatusText').innerText = "เชื่อมต่อแล้ว!";
+                }
+            });
+            window.currentCallId = callDoc.id;
+        }
+
+        function listenForIncomingCalls() {
+            db.collection('chats').where('participants', 'array-contains', currentUser.uid).onSnapshot(snapshot => {
+                snapshot.forEach(doc => {
+                    db.collection('chats').doc(doc.id).collection('calls').where('offer', '!=', null).onSnapshot(callSnap => {
+                        callSnap.docChanges().forEach(change => {
+                            if (change.type === 'added') {
+                                const data = change.doc.data();
+                                if (data.callerId !== currentUser.uid && !data.answer) {
+                                    showIncomingCall(doc.id, change.doc.id, data.callerId);
+                                    notifyUser("สายเข้า...", "มีคนกำลังวิดีโอคอลหาคุณ");
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        async function showIncomingCall(chatId, callId, callerUid) {
+            const callerDoc = await db.collection('users').doc(callerUid).get();
+            document.getElementById('incomingCallerName').innerText = callerDoc.data().nickname;
+            document.getElementById('incomingCallAlert').style.display = 'flex';
+            window.incomingCallData = { chatId, callId };
+        }
+
+        async function answerCall() {
+            document.getElementById('incomingCallAlert').style.display = 'none';
+            document.getElementById('videoCallModal').style.display = 'flex';
+            const { chatId, callId } = window.incomingCallData;
+            window.currentCallId = callId;
+            currentChatId = chatId;
+            const callDoc = db.collection('chats').doc(chatId).collection('calls').doc(callId);
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            document.getElementById('remoteVideo').srcObject = new MediaStream();
+            pc = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.ontrack = event => event.streams[0].getTracks().forEach(track => document.getElementById('remoteVideo').srcObject.addTrack(track));
+            pc.onicecandidate = event => { if(event.candidate) callDoc.collection('answerCandidates').add(event.candidate.toJSON()); };
+            const callData = (await callDoc.get()).data();
+            await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+            const answerDescription = await pc.createAnswer();
+            await pc.setLocalDescription(answerDescription);
+            await callDoc.update({ answer: {type: answerDescription.type, sdp: answerDescription.sdp} });
+            document.getElementById('callStatusText').innerText = "เชื่อมต่อแล้ว!";
+            callDoc.collection('offerCandidates').onSnapshot(snapshot => snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+            }));
+        }
+
+        function rejectCall() { document.getElementById('incomingCallAlert').style.display = 'none'; }
+        async function hangUp() {
+            if(localStream) localStream.getTracks().forEach(track => track.stop());
+            if(pc) pc.close();
+            pc = null; localStream = null;
+            document.getElementById('videoCallModal').style.display = 'none';
+            if(window.currentCallId && currentChatId) await db.collection('chats').doc(currentChatId).collection('calls').doc(window.currentCallId).delete();
+            window.location.reload();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.container').forEach(d=>d.style.display='none');
+            document.querySelectorAll('.active-screen').forEach(d=>d.classList.remove('active-screen'));
+            document.getElementById(id).style.display = (id==='chatScreen')?'grid':'block';
+        }
+        function openAddFriendModal() { document.getElementById('addFriendModal').style.display='flex'; }
+        function openSettings() { document.getElementById('settingsModal').style.display='flex'; }
+        function closeChatMobile() { document.getElementById('chatArea').classList.remove('active'); }
+        function loadUserData() { db.collection('users').doc(currentUser.uid).get().then(d=>document.getElementById('myProfileDisplay').innerText = d.data().nickname); }
+        async function addFriend() {
+            const val = document.getElementById('addFriendInput').value;
+            let q = val.includes('@') ? db.collection('users').where('username','==',val) : db.collection('users').where('email','==',val);
+            const snap = await q.get();
+            if(snap.empty) return alert('ไม่พบ');
+            const uid = snap.docs[0].id;
+            if(uid === currentUser.uid) return alert('เพิ่มตัวเองไม่ได้');
+            const ex = await db.collection('chats').where('participants','array-contains',currentUser.uid).get();
+            let found = false;
+            ex.forEach(d => { if(d.data().participants.includes(uid)) found = true; });
+            if(!found) {
+                await db.collection('chats').add({ participants:[currentUser.uid, uid], lastMessage:'', lastUpdated: firebase.firestore.FieldValue.serverTimestamp() });
+                alert('เพิ่มแล้ว');
+                document.getElementById('addFriendModal').style.display='none';
+            } else { alert('มีเพื่อนคนนี้แล้ว'); }
+        }
+        async function kickOtherSessions() { await db.collection('users').doc(currentUser.uid).update({sessionId: Date.now()}); alert('เรียบร้อย'); }
+    </script>
+</body>
+</html>
