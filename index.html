@@ -165,10 +165,21 @@
 
         /* Modals - Arcane Windows */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
-        .modal-content { 
-            background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; 
-            border: 3px solid var(--gold-accent); box-shadow: 0 0 40px var(--primary-color); color: var(--gold-accent);
-        }
+.modal-content { 
+    background: linear-gradient(135deg, #1a1a2e, #16213e); 
+    padding: 20px; /* ลดขอบลงนิดนึงจะได้มีที่เหลือ */
+    border-radius: 20px; 
+    width: 90%; 
+    max-width: 380px; 
+    border: 3px solid var(--gold-accent); 
+    box-shadow: 0 0 40px var(--primary-color); 
+    color: var(--gold-accent);
+    
+    /* ส่วนสำคัญที่ทำให้เลื่อนได้ */
+    max-height: 80vh; /* สูงไม่เกิน 80% ของหน้าจอ */
+    overflow-y: auto; /* ถ้าเนื้อหายาวกว่าให้เลื่อนได้ */
+}
+
         .theme-selector { display: flex; gap: 15px; margin: 20px 0; justify-content: center; }
         .color-dot { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 3px solid rgba(255,255,255,0.3); box-shadow: 0 0 10px currentColor; transition: transform 0.3s; }
         .color-dot:hover { transform: scale(1.2) rotate(180deg); border-color: white; }
@@ -284,8 +295,13 @@
     </div>
 
     <div id="settingsModal" class="modal">
-        <div class="modal-content">
-            <h3>⚙️ ตั้งค่าตัวละคร</h3>
+    <div class="modal-content">
+        <span onclick="document.getElementById('settingsModal').style.display='none'" 
+              style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--gold-accent);">
+              &times;
+        </span>
+
+        <h3>⚙️ ตั้งค่าตัวละคร</h3>
              <div style="text-align:center; margin-bottom:20px;">
                 <div id="settingAvatarPreview" class="avatar" style="width:100px; height:100px; margin:0 auto; font-size:50px; border: 4px solid var(--gold-accent); box-shadow: 0 0 20px var(--primary-color);"><i class="fas fa-user-astronaut"></i></div>
                 <label for="profileUpload" style="display:block; margin-top:15px; color:var(--gold-accent); cursor:pointer; font-size:14px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s;"><i class="fas fa-camera-retro"></i> เปลี่ยนรูปโฉม</label>
@@ -332,25 +348,71 @@
         let pc = null;
         let localStream = null;
 
+            function getDeviceName() {
+            const ua = navigator.userAgent;
+            let name = "Unknown Device";
+            
+            if (/android/i.test(ua)) {
+                const match = ua.match(/; ([^;]+?) Build/); 
+                name = match ? match[1].trim() : "Android Device";
+            } else if (/iPhone|iPad|iPod/i.test(ua)) {
+                name = "iOS Device";
+            } else if (/Windows/i.test(ua)) {
+                name = "PC (Windows)";
+            } else if (/Mac/i.test(ua)) {
+                name = "Macbook / iMac";
+            } else {
+                name = "Web Browser";
+            }
+            return name;
+        }
+
         // --- AUTH & SETUP ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
+                
+                // 1. โหลดข้อมูลพื้นฐาน
                 loadUserData();
                 loadFriends();
                 listenForIncomingCalls();
+
+                // 2. (ส่วนที่เพิ่ม) ระบบตรวจจับการโดนเตะแบบ Real-time
+                db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    const data = doc.data();
+                    // ดึงเลข Session ปัจจุบันในเครื่องเรา
+                    const localSession = localStorage.getItem('mySessionId');
+                    
+                    // เช็คว่าเลข Session บน Server เปลี่ยนไปไม่ตรงกับเครื่องเราหรือไม่?
+                    // (ถ้ามีข้อมูลบน Server + มีเลขในเครื่องเรา + และเลขไม่ตรงกัน แปลว่าโดนเตะ)
+                    if(data && data.sessionId && localSession && data.sessionId != localSession) {
+                        alert("เซสชั่นของคุณหมดอายุ (ถูกปิดผนึกจากอุปกรณ์อื่น)");
+                        auth.signOut().then(() => {
+                            window.location.reload();
+                        });
+                    }
+                });
+
+                // 3. บันทึกว่าเราเข้าใช้งาน (Log Session)
                 logSession();
+
+                // 4. แสดงหน้าจอแชท
                 showScreen('chatScreen');
                 document.getElementById('chatScreen').style.display = 'grid';
                 requestNotifPermission();
+                
+                // 5. โหลดธีมสีเดิม
                 const savedTheme = localStorage.getItem('chatTheme');
                 if(savedTheme) changeTheme(savedTheme);
+
             } else {
+                // กรณีไม่ได้ล็อกอิน
                 currentUser = null;
                 showScreen('loginScreen');
                 document.getElementById('chatScreen').style.display = 'none';
             }
         });
+
 
         async function login() {
             try {
@@ -378,10 +440,24 @@
             if(email) auth.sendPasswordResetEmail(email).then(()=>alert("ส่งคาถาเปลี่ยนรหัสไปที่เมลแล้ว")).catch(e=>alert(e.message));
         }
         function logout() { auth.signOut(); }
-        function logSession() {
-            if(!currentUser) return;
-            db.collection('users').doc(currentUser.uid).collection('loginHistory').add({ timestamp: firebase.firestore.FieldValue.serverTimestamp(), device: navigator.userAgent });
-        }
+function logSession() {
+    if(!currentUser) return;
+    
+    // สร้างเลข Session ประจำเครื่องนี้ แล้วเก็บไว้ในเครื่อง
+    const mySessionId = Date.now();
+    localStorage.setItem('mySessionId', mySessionId);
+    
+    // บันทึกลงฐานข้อมูล (ทั้งเลข Session ล่าสุด และประวัติการเข้า)
+    const deviceName = getDeviceName(); // เรียกใช้ฟังก์ชันชื่อรุ่นที่สร้างใหม่
+    
+    db.collection('users').doc(currentUser.uid).update({ sessionId: mySessionId });
+    
+    db.collection('users').doc(currentUser.uid).collection('loginHistory').add({ 
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+        device: deviceName // บันทึกชื่อรุ่นสั้นๆ แทน
+    });
+}
+
 
         // --- IMAGE HANDLING ---
         function compressImage(file) {
@@ -544,7 +620,27 @@
                 });
         }
         function changeTheme(color) { document.documentElement.style.setProperty('--primary-color', color); localStorage.setItem('chatTheme', color); }
-        async function kickOtherSessions() { await db.collection('users').doc(currentUser.uid).update({ sessionId: Date.now() }); alert('ปิดผนึกอุปกรณ์อื่นเรียบร้อย!'); }
+async function kickOtherSessions() {
+    if(!confirm("ยืนยันที่จะเตะอุปกรณ์อื่นออกและลบประวัติทั้งหมด?")) return;
+
+    // 1. สร้างรหัสใหม่ แล้วอัปเดตให้เครื่องเราเองก่อน (จะได้ไม่โดนเตะเอง)
+    const newSessionId = Date.now();
+    localStorage.setItem('mySessionId', newSessionId);
+    
+    // 2. อัปเดตในฐานข้อมูล (เครื่องอื่นที่รหัสไม่ตรงจะเด้งออกทันที)
+    await db.collection('users').doc(currentUser.uid).update({ sessionId: newSessionId });
+
+    // 3. ลบประวัติการเข้าใช้งานเก่าๆ ทิ้งให้หมด (Batch Delete)
+    const historySnapshot = await db.collection('users').doc(currentUser.uid).collection('loginHistory').get();
+    const batch = db.batch();
+    historySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    alert('ปิดผนึกอุปกรณ์อื่นและล้างประวัติเรียบร้อย!');
+    openSettings(); // รีเฟรชหน้าต่างตั้งค่า
+}
 
         // --- NOTIFICATIONS & UTILS ---
         function requestNotifPermission() { if("Notification" in window && Notification.permission !== "granted") Notification.requestPermission(); }
